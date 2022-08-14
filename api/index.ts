@@ -1,25 +1,24 @@
 import { IncomingMessage, ServerResponse } from 'http'
 import { parseRequest } from './_lib/parser'
 import { getScreenshot } from './_lib/chromium'
-import { getHtml } from './_lib/template'
 
 const isDev = !process.env.AWS_REGION
-const isHtmlDebug = process.env.OG_HTML_DEBUG === '1'
 
 export default async function handler(
   req: IncomingMessage,
   res: ServerResponse
 ) {
   try {
-    const parsedReq = parseRequest(req)
-    const html = getHtml(parsedReq)
-    if (isHtmlDebug) {
+    const parsedReq = await parseRequest(req)
+    if (!parsedReq.itemId) {
+      res.statusCode = 404
       res.setHeader('Content-Type', 'text/html')
-      res.end(html)
+      res.end('<h1>Not found</h1><p>Sorry, could not find a requested item</p>')
       return
     }
+    const url = `https://farcasternews.xyz/item/${parsedReq.itemId}`
     const { fileType } = parsedReq
-    const file = await getScreenshot(html, fileType, isDev)
+    const file = await getScreenshot(url, fileType, isDev)
     res.statusCode = 200
     res.setHeader('Content-Type', `image/${fileType}`)
     res.setHeader(
